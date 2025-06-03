@@ -1,9 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 
 export default function DailyTaskTracker() {
   const [tasks, setTasks] = useState([]);
@@ -46,58 +42,67 @@ export default function DailyTaskTracker() {
   };
 
   return (
-    <div className="p-4 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Rolling Task Tracker</h1>
+    <div style={{ padding: "2rem", maxWidth: "600px", margin: "0 auto" }}>
+      <h1 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1rem" }}>
+        Rolling Task Tracker
+      </h1>
 
-      <div className="mb-4">
-        <Input
+      <div style={{ marginBottom: "1rem" }}>
+        <input
+          type="text"
           placeholder="Add a new task..."
           value={newTask}
           onChange={(e) => setNewTask(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && addTask()}
+          style={{ padding: "0.5rem", width: "100%", marginBottom: "0.5rem" }}
         />
-        <Button className="mt-2" onClick={addTask}>Add Task</Button>
+        <button onClick={addTask} style={{ padding: "0.5rem 1rem", background: "#1d4ed8", color: "white", border: "none", borderRadius: "4px" }}>
+          Add Task
+        </button>
       </div>
 
-      <Card className="mb-4">
-        <CardContent>
-          <h2 className="text-lg font-semibold mb-2">Today's Tasks</h2>
-          {tasks.length === 0 && <p>No tasks for today.</p>}
-          <ul>
-            {tasks.map((task, i) => (
-              <li key={i} className="flex items-center mb-2">
+      <div style={{ marginBottom: "2rem", border: "1px solid #ccc", padding: "1rem", borderRadius: "8px" }}>
+        <h2 style={{ fontWeight: "bold", marginBottom: "1rem" }}>Today's Tasks</h2>
+        {tasks.length === 0 && <p>No tasks for today.</p>}
+        <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+          {tasks.map((task, i) => (
+            <li key={i} style={{ marginBottom: "0.5rem" }}>
+              <label>
                 <input
                   type="checkbox"
                   checked={task.done}
                   onChange={() => toggleTask(i)}
-                  className="mr-2"
+                  style={{ marginRight: "0.5rem" }}
                 />
-                <span className={task.done ? "line-through text-gray-500" : ""}>{task.text}</span>
-              </li>
-            ))}
-          </ul>
-          <Button className="mt-4" onClick={rollToNextDay}>Roll to Next Day</Button>
-        </CardContent>
-      </Card>
+                <span style={{ textDecoration: task.done ? "line-through" : "none", color: task.done ? "#888" : "#000" }}>
+                  {task.text}
+                </span>
+              </label>
+            </li>
+          ))}
+        </ul>
+        <button onClick={rollToNextDay} style={{ marginTop: "1rem", padding: "0.5rem 1rem", background: "#059669", color: "white", border: "none", borderRadius: "4px" }}>
+          Roll to Next Day
+        </button>
+      </div>
 
-      <Card>
-        <CardContent>
-          <h2 className="text-lg font-semibold mb-2">History</h2>
-          {history.length === 0 && <p>No completed tasks yet.</p>}
-          <ul>
-            {history.map((entry, i) => (
-              <li key={i} className="mb-2">
-                <strong>{entry.date}:</strong>
-                <ul className="ml-4 list-disc">
-                  {entry.tasks.map((task, j) => (
-                    <li key={j}>{task.text}</li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+      <div style={{ border: "1px solid #ccc", padding: "1rem", borderRadius: "8px" }}>
+        <h2 style={{ fontWeight: "bold", marginBottom: "1rem" }}>History</h2>
+        {history.length === 0 && <p>No completed tasks yet.</p>}
+        <ul style={{ paddingLeft: "1rem" }}>
+          {history.map((entry, i) => (
+            <li key={i} style={{ marginBottom: "0.5rem" }}>
+              <strong>{entry.date}:</strong>
+              <ul style={{ marginLeft: "1rem" }}>
+                {entry.tasks.map((task, j) => (
+                  <li key={j}>{task.text}</li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
+
