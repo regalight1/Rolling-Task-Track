@@ -37,18 +37,20 @@ export default function RollingTaskTracker() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const sendMagicLink = async () => {
+ 
+  const [password, setPassword] = useState("");
+
+  const signIn = async () => {
     setAuthMsg("");
-    const e = email.trim();
-    if (!e) return;
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email: e,
-      options: { emailRedirectTo: "https://rolling-task-track.vercel.app" },
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
     });
-
-    setAuthMsg(error ? error.message : "Check your email for the sign-in link.");
+    if (error) setAuthMsg(error.message);
   };
+
+
+
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -161,20 +163,34 @@ export default function RollingTaskTracker() {
             Enter your email and we’ll send you a sign-in link.
           </p>
 
-          <input
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{ width: "100%", padding: "0.5rem", marginBottom: "0.5rem" }}
-          />
+        <input
+          type="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          style={{ width: "100%", padding: "0.5rem", marginBottom: "0.5rem" }}
+        />
 
-          <button
-            onClick={sendMagicLink}
-            style={{ padding: "0.5rem 1rem", background: "#1d4ed8", color: "white", border: "none", borderRadius: 4 }}
-          >
-            Send magic link
-          </button>
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={{ width: "100%", padding: "0.5rem", marginBottom: "0.5rem" }}
+        />
+
+        <button
+          onClick={signIn}
+          style={{
+            padding: "0.5rem 1rem",
+            background: "#1d4ed8",
+            color: "white",
+            border: "none",
+            borderRadius: 4,
+          }}
+        >
+          Sign in
+        </button>
 
           {authMsg && <p style={{ marginTop: "0.75rem" }}>{authMsg}</p>}
         </div>
