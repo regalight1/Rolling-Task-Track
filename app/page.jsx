@@ -25,6 +25,8 @@ export default function RollingTaskTracker() {
   const [newPriority, setNewPriority] = useState("medium");
   const [loading, setLoading] = useState(false);
   const [errMsg, setErrMsg] = useState("");
+  const [history, setHistory] = useState([]);
+
 
   // --- auth session ---
   useEffect(() => {
@@ -58,6 +60,24 @@ export default function RollingTaskTracker() {
   };
 
   // --- data load ---
+  const loadHistory = async () => {
+    if (!session?.user?.id) return;
+    setErrMsg("");
+
+    const { data, error } = await supabase
+      .from("task_history")
+      .select("id, rolled_date, task_text, priority, completed_at")
+      .order("completed_at", { ascending: false });
+
+    if (error) {
+      setErrMsg(error.message);
+      return;
+    }
+    setHistory(data ?? []);
+  };
+
+
+
   const loadTasks = async () => {
     if (!session?.user?.id) return;
     setErrMsg("");
@@ -79,6 +99,7 @@ export default function RollingTaskTracker() {
   useEffect(() => {
     if (!session?.user?.id) return;
     loadTasks();
+    loadHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
 
@@ -138,16 +159,40 @@ export default function RollingTaskTracker() {
     if (completed.length === 0) return;
 
     setErrMsg("");
-    const ids = completed.map((t) => t.id);
 
-    const { error } = await supabase.from("tasks").delete().in("id", ids);
-    if (error) {
-      setErrMsg(error.message);
+    const rolled_date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+    // 1) Insert completed tasks into history
+    const historyRows = completed.map((t) => ({
+      user_id: session.user.id,
+      rolled_date,
+      task_text: t.text,
+      priority: t.priority ?? "medium",
+      source_task_id: t.id,
+      completed_at: new Date().toISOString(),
+    }));
+
+    const { error: insertErr } = await supabase.from("task_history").insert(historyRows);
+
+    if (insertErr) {
+      setErrMsg(insertErr.message);
       return;
     }
 
+    // 2) Remove completed tasks from active list
+    const ids = completed.map((t) => t.id);
+    const { error: deleteErr } = await supabase.from("tasks").delete().in("id", ids);
+
+    if (deleteErr) {
+      setErrMsg(deleteErr.message);
+      return;
+    }
+
+    // 3) Update UI + refresh history
     setTasks((prev) => prev.filter((t) => !t.done));
+    loadHistory();
   };
+
 
   // --- UI ---
   if (!session) {
@@ -272,8 +317,23 @@ export default function RollingTaskTracker() {
           onClick={rollToNextDay}
           style={{ marginTop: "1rem", padding: "0.5rem 1rem", background: "#059669", color: "white", border: "none", borderRadius: 4 }}
         >
-          Roll to Next Day (removes completed)
+          Roll to Next Day (archives completed)
         </button>
+      </div>
+
+      <div style={{ marginTop: "2rem", border: "1px solid #ccc", padding: "1rem", borderRadius: 8 }}>
+        <h2 style={{ fontWeight: "bold", marginBottom: "1rem" }}>History</h2>
+
+        {history.length === 0 && <p>No completed tasks yet.</p>}
+
+        <ul style={{ paddingLeft: "1rem" }}>
+          {history.map((h) => (
+            <li key={h.id} style={{ marginBottom: "0.5rem" }}>
+              <strong>{h.rolled_date}:</strong> {h.task_text}{" "}
+              <span style={{ color: "#555" }}>({priorityLabel(h.priority)})</span>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
