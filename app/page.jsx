@@ -1,108 +1,75 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabaseClient";
 
-export default function DailyTaskTracker() {
-  const [tasks, setTasks] = useState([]);
-  const [newTask, setNewTask] = useState("");
-  const [history, setHistory] = useState([]);
+export default function Home() {
+  const [session, setSession] = useState(null);
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
-    const savedTasks = JSON.parse(localStorage.getItem("tasks")) || [];
-    const savedHistory = JSON.parse(localStorage.getItem("history")) || [];
-    setTasks(savedTasks);
-    setHistory(savedHistory);
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      }
+    );
+
+    return () => listener.subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem("tasks", JSON.stringify(tasks));
-    localStorage.setItem("history", JSON.stringify(history));
-  }, [tasks, history]);
+  const sendMagicLink = async () => {
+    setMessage("");
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: "https://rolling-task-track.vercel.app",
+      },
+    });
 
-  const addTask = () => {
-    if (newTask.trim()) {
-      setTasks([...tasks, { text: newTask, done: false }]);
-      setNewTask("");
-    }
+    if (error) setMessage(error.message);
+    else setMessage("Check your email for the sign-in link.");
   };
 
-  const toggleTask = (index) => {
-    const updated = [...tasks];
-    updated[index].done = !updated[index].done;
-    setTasks(updated);
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
   };
 
-  const rollToNextDay = () => {
-    const completed = tasks.filter((task) => task.done);
-    const incomplete = tasks.filter((task) => !task.done);
-    if (completed.length) {
-      const date = new Date().toISOString().split("T")[0];
-      setHistory([...history, { date, tasks: completed }]);
-    }
-    setTasks(incomplete);
-  };
+  if (!session) {
+    return (
+      <div style={{ padding: "2rem", maxWidth: 420, margin: "0 auto" }}>
+        <h1>Rolling Task Tracker</h1>
+
+        <input
+          type="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          style={{ width: "100%", padding: "0.5rem", marginBottom: "0.5rem" }}
+        />
+
+        <button onClick={sendMagicLink} style={{ padding: "0.5rem 1rem" }}>
+          Send magic link
+        </button>
+
+        {message && <p style={{ marginTop: "1rem" }}>{message}</p>}
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: "2rem", maxWidth: "600px", margin: "0 auto" }}>
-      <h1 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1rem" }}>
-        Rolling Task Tracker
-      </h1>
+    <div style={{ padding: "2rem", maxWidth: 420, margin: "0 auto" }}>
+      <h1>Rolling Task Tracker</h1>
+      <p>Signed in as:</p>
+      <strong>{session.user.email}</strong>
 
-      <div style={{ marginBottom: "1rem" }}>
-        <input
-          type="text"
-          placeholder="Add a new task..."
-          value={newTask}
-          onChange={(e) => setNewTask(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && addTask()}
-          style={{ padding: "0.5rem", width: "100%", marginBottom: "0.5rem" }}
-        />
-        <button onClick={addTask} style={{ padding: "0.5rem 1rem", background: "#1d4ed8", color: "white", border: "none", borderRadius: "4px" }}>
-          Add Task
-        </button>
-      </div>
-
-      <div style={{ marginBottom: "2rem", border: "1px solid #ccc", padding: "1rem", borderRadius: "8px" }}>
-        <h2 style={{ fontWeight: "bold", marginBottom: "1rem" }}>Today's Tasks</h2>
-        {tasks.length === 0 && <p>No tasks for today.</p>}
-        <ul style={{ listStyle: "none", paddingLeft: 0 }}>
-          {tasks.map((task, i) => (
-            <li key={i} style={{ marginBottom: "0.5rem" }}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={task.done}
-                  onChange={() => toggleTask(i)}
-                  style={{ marginRight: "0.5rem" }}
-                />
-                <span style={{ textDecoration: task.done ? "line-through" : "none", color: task.done ? "#888" : "#000" }}>
-                  {task.text}
-                </span>
-              </label>
-            </li>
-          ))}
-        </ul>
-        <button onClick={rollToNextDay} style={{ marginTop: "1rem", padding: "0.5rem 1rem", background: "#059669", color: "white", border: "none", borderRadius: "4px" }}>
-          Roll to Next Day
-        </button>
-      </div>
-
-      <div style={{ border: "1px solid #ccc", padding: "1rem", borderRadius: "8px" }}>
-        <h2 style={{ fontWeight: "bold", marginBottom: "1rem" }}>History</h2>
-        {history.length === 0 && <p>No completed tasks yet.</p>}
-        <ul style={{ paddingLeft: "1rem" }}>
-          {history.map((entry, i) => (
-            <li key={i} style={{ marginBottom: "0.5rem" }}>
-              <strong>{entry.date}:</strong>
-              <ul style={{ marginLeft: "1rem" }}>
-                {entry.tasks.map((task, j) => (
-                  <li key={j}>{task.text}</li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
+      <div style={{ marginTop: "1rem" }}>
+        <button onClick={signOut}>Sign out</button>
       </div>
     </div>
   );
 }
-
